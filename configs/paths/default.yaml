@@ -1,0 +1,16 @@
+# path to root directory (set by PROJECT_ROOT or use . for cwd)
+root_dir: ${oc.env:PROJECT_ROOT,.}
+
+# path to data directory (raw FASTA, processed features, fixed test sets)
+data_dir: ${paths.root_dir}/data
+
+# path to iFeature package (used by run_ifeature script)
+ifeature_dir: ${paths.root_dir}/iFeature
+
+# path to logging directory
+log_dir: ${paths.root_dir}/logs
+
+# Hydra output directory
+output_dir: ${hydra:runtime.output_dir}
+
+work_dir: ${hydra:runtime.cwd}

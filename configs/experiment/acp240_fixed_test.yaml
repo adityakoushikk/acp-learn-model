@@ -1,0 +1,6 @@
+# Example: train on main data, test on fixed acp-240 set.
+# Usage: python -m acp_learn.train experiment=acp240_fixed_test
+# Override data.test_fasta if your file is elsewhere.
+data:
+  splitter: fixed_test
+  test_fasta: ${paths.data_dir}/acp240.txt

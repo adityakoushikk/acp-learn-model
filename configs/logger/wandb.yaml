@@ -1,0 +1,10 @@
+wandb:
+  _target_: lightning.pytorch.loggers.wandb.WandbLogger
+  save_dir: "${paths.output_dir}"
+  offline: False
+  id: null
+  project: "acp-learn"
+  log_model: False
+  group: ""
+  tags: ${tags}
+  job_type: "train"

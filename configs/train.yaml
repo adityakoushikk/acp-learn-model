@@ -1,0 +1,26 @@
+# @package _global_
+# ACP (Anticancer Peptide) classification – Hydra + Lightning + WANDB
+
+defaults:
+  - _self_
+  - data: default
+  - model: mlp
+  - callbacks: default
+  - logger: wandb
+  - trainer: default
+  - paths: default
+  - extras: default
+  - hydra: default
+  - experiment: null
+  - debug: null
+
+task_name: "acp_train"
+tags: ["acp", "dev"]
+
+train: True
+test: True
+ckpt_path: null
+seed: 42
+
+# For hyperparameter sweeps / multirun
+optimized_metric: "test/mcc"

@@ -1,0 +1,14 @@
+_target_: acp_learn.models.acp_module.ACPLitModule
+
+net:
+  _target_: acp_learn.models.architectures.mlp.DeepMLP
+  input_dim: ???
+  hidden_dims: [128, 64]
+  dropout_rates: [0.4, 0.3]
+  activation: relu
+
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 0.001
+
+loss: binary_crossentropy

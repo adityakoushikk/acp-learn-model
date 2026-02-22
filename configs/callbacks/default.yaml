@@ -1,0 +1,18 @@
+defaults:
+  - model_checkpoint
+  - early_stopping
+  - _self_
+
+model_checkpoint:
+  _target_: lightning.pytorch.callbacks.ModelCheckpoint
+  dirpath: ${paths.output_dir}/checkpoints
+  filename: "epoch_{epoch:03d}"
+  monitor: "val/auc"
+  mode: "max"
+  save_last: True
+
+early_stopping:
+  _target_: lightning.pytorch.callbacks.EarlyStopping
+  monitor: "val/loss"
+  patience: 15
+  mode: "min"
