@@ -2,4 +2,3 @@ _target_: acp_learn.data.splitters.kmeans_splitter.KMeansSplitter
 n_clusters: 10
 test_cluster_frac: 0.2
 val_cluster_frac: 0.1
-split_seed: 42

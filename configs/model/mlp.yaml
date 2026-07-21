@@ -1,16 +1,16 @@
-# Default MLP (matches notebook: 3 hidden layers, dropout)
+# Default MLP for a few thousand peptide samples with handcrafted features.
 _target_: acp_learn.models.acp_module.ACPLitModule
 
 net:
   _target_: acp_learn.models.architectures.mlp.DeepMLP
   input_dim: ???  # set by datamodule
-  hidden_dims: [192, 96, 64]
-  dropout_rates: [0.6, 0.5, 0.2]
+  hidden_dims: [128, 64, 32]
+  dropout_rates: [0.3, 0.2, 0.1]
   activation: relu
 
 optimizer:
-  _target_: torch.optim.Adam
-  lr: 0.001
-  weight_decay: 0.0
+  _target_: torch.optim.AdamW
+  lr: 0.0005
+  weight_decay: 0.0001
 
 loss: binary_crossentropy

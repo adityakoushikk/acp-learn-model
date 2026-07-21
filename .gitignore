@@ -74,8 +74,8 @@ checkpoints/
 # Data and iFeature temp
 # -----------------------------------------------------------------------------
 **/_ifeature_tmp/
-# Uncomment to ignore generated feature CSVs
-# data/processed/
+data/processed/
+
 
 # -----------------------------------------------------------------------------
 # OS

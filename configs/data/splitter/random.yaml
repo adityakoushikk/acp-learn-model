@@ -2,4 +2,3 @@ _target_: acp_learn.data.splitters.random_splitter.RandomSplitter
 train_frac: 0.8
 val_frac: 0.1
 test_frac: 0.1
-split_seed: 42

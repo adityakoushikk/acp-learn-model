@@ -6,12 +6,23 @@ This document describes the refactored ACP (Anticancer Peptide) classification p
 
 ### 1. Install dependencies
 
+Create and activate a project-local Python virtual environment, then install the
+training dependencies from `requirements-train.txt`:
+
 ```bash
 cd /path/to/acp-learn-model
-pip install torch lightning pytorch-lightning torchmetrics hydra-core omegaconf pandas numpy scikit-learn pyyaml
-# Optional: for WANDB
-pip install wandb
+python3 -m venv venv
+source venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements-train.txt
+python -m pip install -e .
 ```
+
+On Windows PowerShell, activate the environment with
+`.\venv\Scripts\Activate.ps1` instead.
+
+The editable install makes the `src/acp_learn` package importable while keeping
+local source changes immediately available in the environment.
 
 ### 2. WANDB integration (optional but recommended)
 
@@ -68,16 +79,16 @@ Or with overrides:
 
 ```bash
 # Different splitter
-python -m acp_learn.train data=splitter/stratified_kfold data.splitter.n_splits=5 data.splitter.fold_index=0
+python -m acp_learn.train data/splitter=stratified_kfold data.splitter.n_splits=5 data.splitter.fold_index=0
 
 # Different feature types
 python -m acp_learn.train data.feature_types=[CTDC,CTDD,CKSAAGP]
 
 # Fixed test set (e.g. acp-240)
-python -m acp_learn.train data=splitter/fixed_test data.test_fasta=${PROJECT_ROOT}/data/acp240.txt
+python -m acp_learn.train data/splitter=fixed_test data.test_fasta=${PROJECT_ROOT}/acp240.txt
 
 # K-means clustered split
-python -m acp_learn.train data=splitter/kmeans_clustered data.splitter.n_clusters=10
+python -m acp_learn.train data/splitter=kmeans_clustered data.splitter.n_clusters=10
 
 # Model and training
 python -m acp_learn.train model=mlp_small trainer.max_epochs=50 data.batch_size=32
@@ -86,12 +97,31 @@ python -m acp_learn.train model=mlp_small trainer.max_epochs=50 data.batch_size=
 ### Multirun (sweeps)
 
 ```bash
+# Five training seeds using the default random split
+python -m acp_learn.train --multirun seed=1,2,3,4,5
+
 # Stratified K-Fold over 5 folds
-python -m acp_learn.train --multirun data=splitter/stratified_kfold data.splitter.fold_index=0,1,2,3,4
+python -m acp_learn.train --multirun data/splitter=stratified_kfold data.splitter.fold_index=0,1,2,3,4
 
 # Multiple feature sets
 python -m acp_learn.train --multirun data.feature_types=[CTDC,CTDD],[CTDC,CKSAAGP,CTDD]
 ```
+
+The first command creates exactly five runs. It changes `seed`, which controls
+model initialization, other training randomness, and the random splitter's
+train/validation/test partition. Sweeping multiple comma-separated options in
+one command creates a Cartesian product, so two 5-value sweeps would create 25
+runs.
+
+Unless overridden, multiruns inherit the main defaults:
+
+- Random `80%` train, `10%` validation, and `10%` test split
+- Features: `CTDC`, `CKSAAGP`, and `CTDD`
+- Standard scaling, class-weight imbalance handling, and batch size `64`
+- Default MLP hidden layers `[192, 96, 64]` with ReLU and dropout
+- Adam optimizer with learning rate `0.001`
+- Up to `100` epochs, validation every epoch, one automatically selected device
+- Training and testing enabled, with metrics logged to the `acp-learn` WANDB project
 
 ---
 
@@ -99,7 +129,7 @@ python -m acp_learn.train --multirun data.feature_types=[CTDC,CTDD],[CTDC,CKSAAG
 
 | Area | Parameter | Config path | Examples |
 |------|-----------|-------------|----------|
-| **Data** | Splitter | `data=splitter/<name>` | random, stratified_kfold, kmeans_clustered, fixed_test |
+| **Data** | Splitter | `data/splitter=<name>` | random, stratified_kfold, kmeans_clustered, fixed_test |
 | | Feature types | `data.feature_types` | [CTDC, CKSAAGP, CTDD] |
 | | Test set | `data.test_fasta` | path to FASTA for fixed test (e.g. acp-240) |
 | | Batch size | `data.batch_size` | 64 |
@@ -113,11 +143,10 @@ python -m acp_learn.train --multirun data.feature_types=[CTDC,CTDD],[CTDC,CKSAAG
 
 ## Data preparation
 
-1. **Train FASTA**: Place a FASTA file at `data/train.fasta` (or set `data.train_fasta`). Headers determine labels:
-   - If header contains the **negative** pattern (default `TRNEGATIVE`) → label 0.
-   - If header contains the **positive** pattern (default `seq`) → label 1.
-2. **Optional fixed test set**: Set `data.test_fasta` to a path (e.g. `data/acp240.txt`) and use `data=splitter/fixed_test` so the test set is always that file.
+1. **Train FASTA**: Place the training FASTA at `data/train.fasta` or set `data.train_fasta` explicitly. For the included UCIBIG file, either copy it to `data/train.fasta` or run with `data.train_fasta=${PROJECT_ROOT}/UCIBIG.txt`. Headers containing `seq` are labeled positive, and headers containing `NEGATIVE` are labeled negative by default.
+2. **Optional fixed test set**: Set `data.test_fasta` to a path (e.g. `acp240.txt`) and use `data/splitter=fixed_test` so the test set is always that file.
 3. **iFeature**: The pipeline runs iFeature for each type in `data.feature_types` and merges the tables. Ensure `iFeature/` (with `iFeature.py`) is at `paths.ifeature_dir` (default: project root `iFeature`). You can precompute features by running `scripts/run_ifeature.py` and then pointing `data.features_cache` to the merged CSV to skip recomputation.
+4. **Short peptides and CKSAAGP**: `CKSAAGP` with iFeature's default gap requires every sequence to be at least 7 residues long. If your training FASTA contains shorter peptides, remove or otherwise handle those sequences before using the default feature set.
 
 ---
 

@@ -20,5 +20,6 @@ def readFasta(file):
 	for fasta in records:
 		array = fasta.split('\n')
 		name, sequence = array[0].split()[0], re.sub('[^ARNDCQEGHILKMFPSTWYV-]', '-', ''.join(array[1:]).upper())
-		myFasta.append([name, sequence])
+		if len(sequence) >= 7:
+			myFasta.append([name, sequence])
 	return myFasta

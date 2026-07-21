@@ -15,11 +15,13 @@ class FixedTestSplitter(BaseSplitter):
         self,
         train_frac: float = 0.9,
         val_frac: float = 0.1,
-        split_seed: int = 42,
+        split_seed: int | None = None,
     ):
         self.train_frac = train_frac
         self.val_frac = val_frac
         self.split_seed = split_seed
+        if self.split_seed is None:
+            self.split_seed = int(np.random.randint(0, np.iinfo(np.int32).max))
 
     def split(
         self,

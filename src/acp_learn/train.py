@@ -46,6 +46,7 @@ def train(cfg: DictConfig) -> tuple[dict, dict]:
         cfg.model,
         net=net,
         class_weights=datamodule.class_weights,
+        _recursive_=False,
     )
 
     log.info("Instantiating callbacks...")
@@ -69,8 +70,11 @@ def train(cfg: DictConfig) -> tuple[dict, dict]:
         ckpt_path = getattr(trainer.checkpoint_callback, "best_model_path", None) if trainer.checkpoint_callback else None
         if ckpt_path == "":
             ckpt_path = None
-        trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+        trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path, weights_only=False if ckpt_path else None)
         metric_dict = {**metric_dict, **trainer.callback_metrics}
+
+    for logger in loggers:
+        logger.finalize("success")
 
     return metric_dict, object_dict
 

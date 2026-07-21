@@ -1,7 +1,6 @@
-# @package _global_
 defaults:
   - _self_
-  - splitter: random
+  - splitter: fixed_test
 
 _target_: acp_learn.data.acp_datamodule.ACPDataModule
 
@@ -9,7 +8,7 @@ _target_: acp_learn.data.acp_datamodule.ACPDataModule
 data_dir: ${paths.data_dir}
 train_fasta: ${paths.data_dir}/train.fasta
 # Optional: fixed test set (e.g. acp-240). If set, splitter uses this as test.
-test_fasta: null
+test_fasta: ${paths.data_dir}/acp240.fasta
 
 # iFeature: which descriptor types to use (order = join order in merged features)
 feature_types: [CTDC, CKSAAGP, CTDD]
@@ -22,10 +21,9 @@ features_cache: null
 # When null, cache is written to data_dir/processed/features_<types>.csv
 
 # Label rules: how to infer label from sequence ID in FASTA
-# positive_pattern: if in id -> label 1 (e.g. "seq", "ACP")
-# negative_pattern: if in id -> label 0 (e.g. "TRNEGATIVE", "non")
-label_positive_pattern: "seq"
-label_negative_pattern: "TRNEGATIVE"
+# Label rules: how to infer labels from train FASTA headers.
+label_positive_pattern_train: "seq"
+label_negative_pattern_train: "NEGATIVE"
 
 # DataLoader
 batch_size: 64
@@ -33,7 +31,7 @@ num_workers: 0
 pin_memory: False
 
 # Imbalance: none | class_weight | oversample | undersample | weighted_sampler
-imbalance: class_weight
+imbalance: none
 
 # Scaling: standardize | minmax | none
 scaler: standardize

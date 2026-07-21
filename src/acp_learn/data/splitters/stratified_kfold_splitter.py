@@ -11,13 +11,15 @@ class StratifiedKFoldSplitter(BaseSplitter):
         n_splits: int = 5,
         fold_index: int = 0,
         shuffle: bool = True,
-        split_seed: int = 42,
+        split_seed: int | None = None,
         val_frac: float = 0.1,
     ):
         self.n_splits = n_splits
         self.fold_index = fold_index
         self.shuffle = shuffle
         self.split_seed = split_seed
+        if self.split_seed is None:
+            self.split_seed = int(np.random.randint(0, np.iinfo(np.int32).max))
         self.val_frac = val_frac
 
     def split(
@@ -31,7 +33,7 @@ class StratifiedKFoldSplitter(BaseSplitter):
         skf = StratifiedKFold(
             n_splits=self.n_splits,
             shuffle=self.shuffle,
-            random_state=self.split_seed,
+            random_state=self.split_seed if self.shuffle else None,
         )
         idx = np.arange(n_samples)
         folds = list(skf.split(idx, y))

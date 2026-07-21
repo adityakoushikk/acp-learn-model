@@ -36,10 +36,27 @@ def run_ifeature_type(
         )
 
 
-def load_ifeature_output(path: str) -> pd.DataFrame:
+def load_ifeature_output(path: str, feature_type: str) -> pd.DataFrame:
+    text = Path(path).read_text().strip()
+    if text == "Descriptor calculation failed.":
+        raise RuntimeError(
+            f"iFeature descriptor {feature_type} failed. "
+            "The output file only contains 'Descriptor calculation failed.'."
+        )
     df = pd.read_csv(path, sep="\t")
-    if "#" in df.columns:
-        df = df.drop(columns=["#"])
+    failed_cols = [c for c in df.columns if "descriptor calculation failed" in str(c).lower()]
+    if failed_cols:
+        raise RuntimeError(
+            f"iFeature descriptor {feature_type} failed and produced invalid columns: {failed_cols}"
+        )
+    if df.empty:
+        raise RuntimeError(f"iFeature descriptor {feature_type} produced no feature rows.")
+    if "#" not in df.columns:
+        raise RuntimeError(f"iFeature descriptor {feature_type} output is missing the sequence id column '#'.")
+    if df["#"].duplicated().any():
+        dupes = df.loc[df["#"].duplicated(), "#"].head().tolist()
+        raise RuntimeError(f"iFeature descriptor {feature_type} produced duplicate sequence ids: {dupes}")
+    df = df.set_index("#")
     return df
 
 
@@ -76,13 +93,28 @@ def run_and_merge(
             output_path=str(out_path),
             python_exe=python_exe,
         )
-        dfs.append(load_ifeature_output(str(out_path)))
+        dfs.append(load_ifeature_output(str(out_path), ft))
         if not keep_intermediate:
             out_path.unlink(missing_ok=True)
+
+    row_counts = {ft: len(df) for ft, df in zip(feature_types, dfs)}
+    if len(set(row_counts.values())) != 1:
+        raise RuntimeError(f"iFeature descriptors produced different row counts: {row_counts}")
+    id_sets = {ft: set(df.index) for ft, df in zip(feature_types, dfs)}
+    first_type = feature_types[0]
+    first_ids = id_sets[first_type]
+    mismatched_ids = {
+        ft: len(first_ids.symmetric_difference(ids))
+        for ft, ids in id_sets.items()
+        if ids != first_ids
+    }
+    if mismatched_ids:
+        raise RuntimeError(f"iFeature descriptors produced different sequence id sets: {mismatched_ids}")
 
     merged = dfs[0]
     for d in dfs[1:]:
         merged = merged.join(d)
+    merged = merged.reset_index().rename(columns={"#": "ID"})
     merged.to_csv(output_csv, index=False)
     if not keep_intermediate and out_dir.exists():
         out_dir.rmdir()

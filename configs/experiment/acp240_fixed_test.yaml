@@ -1,6 +1,9 @@
+# @package _global_
 # Example: train on main data, test on fixed acp-240 set.
 # Usage: python -m acp_learn.train experiment=acp240_fixed_test
 # Override data.test_fasta if your file is elsewhere.
+defaults:
+  - override /data/splitter: fixed_test
+
 data:
-  splitter: fixed_test
-  test_fasta: ${paths.data_dir}/acp240.txt
+  test_fasta: ${paths.root_dir}/acp240.txt

@@ -1,6 +1,5 @@
 """Random train/val/test split."""
 import numpy as np
-from sklearn.model_selection import train_test_split
 
 from acp_learn.data.splitters.base_splitter import BaseSplitter
 
@@ -11,12 +10,14 @@ class RandomSplitter(BaseSplitter):
         train_frac: float = 0.8,
         val_frac: float = 0.1,
         test_frac: float = 0.1,
-        split_seed: int = 42,
+        split_seed: int | None = None,
     ):
         self.train_frac = train_frac
         self.val_frac = val_frac
         self.test_frac = test_frac
         self.split_seed = split_seed
+        if self.split_seed is None:
+            self.split_seed = int(np.random.randint(0, np.iinfo(np.int32).max))
 
     def split(
         self,

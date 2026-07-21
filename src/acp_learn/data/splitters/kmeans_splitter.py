@@ -11,12 +11,14 @@ class KMeansSplitter(BaseSplitter):
         n_clusters: int = 10,
         test_cluster_frac: float = 0.2,
         val_cluster_frac: float = 0.1,
-        split_seed: int = 42,
+        split_seed: int | None = None,
     ):
         self.n_clusters = n_clusters
         self.test_cluster_frac = test_cluster_frac
         self.val_cluster_frac = val_cluster_frac
         self.split_seed = split_seed
+        if self.split_seed is None:
+            self.split_seed = int(np.random.randint(0, np.iinfo(np.int32).max))
 
     def split(
         self,

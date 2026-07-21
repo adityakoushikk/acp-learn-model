@@ -1,9 +1,9 @@
 """Lightning module for ACP binary classification with metrics (AUC, MCC, F1, etc.)."""
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from lightning import LightningModule
-from torchmetrics import Accuracy, AUROC, MatthewsCorrCoef, F1Score, Precision, Recall
+from omegaconf import DictConfig, OmegaConf
+from torchmetrics import Accuracy, AUROC, MatthewsCorrCoef, F1Score, MetricCollection, Precision, Recall
 
 
 class ACPLitModule(LightningModule):
@@ -15,18 +15,25 @@ class ACPLitModule(LightningModule):
         class_weights: torch.Tensor | None = None,
     ):
         super().__init__()
+        if isinstance(optimizer, DictConfig):
+            optimizer = OmegaConf.to_container(optimizer, resolve=True)
         self.save_hyperparameters(logger=False, ignore=["net", "class_weights"])
         self.net = net
         pos_weight = None
         if class_weights is not None and class_weights.numel() >= 2:
             pos_weight = (class_weights[1] / class_weights[0]).view(1)
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-        self._accuracy = Accuracy(task="binary")
-        self._auc = AUROC(task="binary")
-        self._mcc = MatthewsCorrCoef(task="binary", num_classes=2)
-        self._f1 = F1Score(task="binary")
-        self._precision = Precision(task="binary")
-        self._recall = Recall(task="binary")
+        metrics = MetricCollection({
+            "accuracy": Accuracy(task="binary"),
+            "auc": AUROC(task="binary"),
+            "mcc": MatthewsCorrCoef(task="binary", num_classes=2),
+            "f1": F1Score(task="binary"),
+            "precision": Precision(task="binary"),
+            "recall": Recall(task="binary"),
+        })
+        self.train_metrics = metrics.clone(prefix="train/")
+        self.val_metrics = metrics.clone(prefix="val/")
+        self.test_metrics = metrics.clone(prefix="test/")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
@@ -34,31 +41,16 @@ class ACPLitModule(LightningModule):
     def _step(self, batch: tuple, stage: str):
         x, y = batch
         y_hat = self.forward(x)
-        y_float = y.float().unsqueeze(1)
-        loss = F.binary_cross_entropy_with_logits(y_hat, y_float.squeeze(-1))
-        pred = (torch.sigmoid(y_hat) >= 0.5).long()
-        self._accuracy.update(pred, y)
-        self._auc.update(torch.sigmoid(y_hat), y)
-        self._mcc.update(pred, y)
-        self._f1.update(pred, y)
-        self._precision.update(pred, y)
-        self._recall.update(pred, y)
+        loss = self.criterion(y_hat, y.float())
+        probabilities = torch.sigmoid(y_hat)
+        getattr(self, f"{stage}_metrics").update(probabilities, y)
         self.log(f"{stage}/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def _epoch_end_metrics(self, stage: str):
-        self.log(f"{stage}/accuracy", self._accuracy.compute(), on_epoch=True)
-        self.log(f"{stage}/auc", self._auc.compute(), on_epoch=True)
-        self.log(f"{stage}/mcc", self._mcc.compute(), on_epoch=True)
-        self.log(f"{stage}/f1", self._f1.compute(), on_epoch=True)
-        self.log(f"{stage}/precision", self._precision.compute(), on_epoch=True)
-        self.log(f"{stage}/recall", self._recall.compute(), on_epoch=True)
-        self._accuracy.reset()
-        self._auc.reset()
-        self._mcc.reset()
-        self._f1.reset()
-        self._precision.reset()
-        self._recall.reset()
+        metrics = getattr(self, f"{stage}_metrics")
+        self.log_dict(metrics.compute(), on_epoch=True)
+        metrics.reset()
 
     def training_step(self, batch, batch_idx):
         return self._step(batch, "train")
